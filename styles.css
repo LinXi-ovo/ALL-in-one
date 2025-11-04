@@ -320,6 +320,117 @@ textarea {
     border-bottom: 3px solid white;
 }
 
+.export-option, .privacy-option {
+    margin: 8px 0;
+    display: flex;
+    align-items: center;
+}
+
+.export-option input, .privacy-option input {
+    margin-right: 8px;
+    width: auto;
+}
+
+/* 链接和文件管理样式 */
+.link-item, .file-item {
+    display: flex;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.link-item input, .file-item input {
+    margin-right: 10px;
+}
+
+.link-item input[type="url"], .link-item input[type="text"] {
+    flex: 1;
+}
+
+.remove-link-btn, .remove-file-btn {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#add-link-btn, #add-file-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+/* 通知状态样式 */
+.notification-status {
+    margin: 10px 0;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+    display: inline-block;
+}
+
+.status-ongoing {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.status-completed {
+    background-color: #e8f5e9;
+    color: #388e3c;
+}
+
+.status-overdue {
+    background-color: #ffebee;
+    color: #d32f2f;
+}
+
+.status-abandoned {
+    background-color: #f5f5f5;
+    color: #757575;
+}
+
+.status-waiting {
+    background-color: #fff8e1;
+    color: #f57c00;
+}
+
+.waiting-description {
+    margin-top: 5px;
+    padding: 8px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    font-style: italic;
+    color: #666;
+}
+
+/* 日期标签样式 */
+.date-tag {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 10px;
+    display: inline-block;
+}
+
+.date-today {
+    background-color: #ff9800;
+    color: white;
+}
+
+.date-tomorrow {
+    background-color: #2196f3;
+    color: white;
+}
+
 .import-export-container {
     display: flex;
     justify-content: space-between;

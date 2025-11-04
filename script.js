@@ -101,7 +101,45 @@ document.addEventListener('DOMContentLoaded', function() {
         const title = document.getElementById('notification-title').value;
         const content = document.getElementById('notification-content').value;
         const deadline = document.getElementById('notification-deadline').value;
-        const link = document.getElementById('notification-link').value;
+        const status = document.getElementById('notification-status').value;
+        const waitingDescription = document.getElementById('waiting-description').value;
+
+        // 获取所有链接
+        const links = [];
+        document.querySelectorAll('.link-item').forEach(item => {
+            const url = item.querySelector('.notification-link').value;
+            const title = item.querySelector('.link-title').value;
+            if (url) {
+                links.push({
+                    url,
+                    title: title || url
+                });
+            }
+        });
+
+        // 获取所有文件
+        const files = [];
+        const filePromises = [];
+
+        document.querySelectorAll('.file-item').forEach((item, index) => {
+            const fileInput = item.querySelector('.notification-file');
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                filePromises.push(
+                    new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            resolve({
+                                name: file.name,
+                                type: file.type,
+                                data: e.target.result
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    })
+                );
+            }
+        });
 
         // 获取图片数据
         let imageData = null;
@@ -110,38 +148,47 @@ document.addEventListener('DOMContentLoaded', function() {
             imageData = previewImg.src;
         }
 
-        // 根据模式执行不同操作
-        if (mode === 'edit') {
-            const id = parseInt(this.getAttribute('data-id'));
-            updateNotification(type, id, {
-                title,
-                content,
-                deadline,
-                link,
-                image: imageData
-            });
-        } else {
-            // 保存新通知到本地存储
-            saveNotification(type, {
-                id: Date.now(),
-                title,
-                content,
-                deadline,
-                link,
-                image: imageData,
-                created: new Date().toISOString()
-            });
-        }
+        // 等待所有文件读取完成
+        Promise.all(filePromises).then(fileData => {
+            // 根据模式执行不同操作
+            if (mode === 'edit') {
+                const id = parseInt(this.getAttribute('data-id'));
+                updateNotification(type, id, {
+                    title,
+                    content,
+                    deadline,
+                    status,
+                    waitingDescription: status === 'waiting' ? waitingDescription : '',
+                    links,
+                    files: fileData,
+                    image: imageData
+                });
+            } else {
+                // 保存新通知到本地存储
+                saveNotification(type, {
+                    id: Date.now(),
+                    title,
+                    content,
+                    deadline,
+                    status,
+                    waitingDescription: status === 'waiting' ? waitingDescription : '',
+                    links,
+                    files: fileData,
+                    image: imageData,
+                    created: new Date().toISOString()
+                });
+            }
 
-        // 关闭模态框并重置表单
-        modal.style.display = 'none';
-        this.reset();
-        this.removeAttribute('data-mode');
-        this.removeAttribute('data-id');
-        imagePreview.innerHTML = '';
+            // 关闭模态框并重置表单
+            modal.style.display = 'none';
+            this.reset();
+            this.removeAttribute('data-mode');
+            this.removeAttribute('data-id');
+            imagePreview.innerHTML = '';
 
-        // 重新加载通知
-        loadNotifications(type);
+            // 重新加载通知
+            loadNotifications(type);
+        });
     });
 
     // 导入导出按钮事件
@@ -173,6 +220,64 @@ document.addEventListener('DOMContentLoaded', function() {
             importAllNotifications(fileInput.files[0]);
         } else {
             alert('请选择要导入的文件');
+        }
+    });
+
+    // 添加链接按钮事件
+    document.getElementById('add-link-btn').addEventListener('click', function() {
+        const linksContainer = document.getElementById('links-container');
+        const linkItem = document.createElement('div');
+        linkItem.className = 'link-item';
+        linkItem.innerHTML = `
+            <input type="url" class="notification-link" placeholder="https://example.com">
+            <input type="text" class="link-title" placeholder="链接标题（可选）">
+            <button type="button" class="remove-link-btn">删除</button>
+        `;
+        linksContainer.appendChild(linkItem);
+
+        // 添加删除按钮事件
+        linkItem.querySelector('.remove-link-btn').addEventListener('click', function() {
+            linkItem.remove();
+        });
+    });
+
+    // 添加文件按钮事件
+    document.getElementById('add-file-btn').addEventListener('click', function() {
+        const filesContainer = document.getElementById('files-container');
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        fileItem.innerHTML = `
+            <input type="file" class="notification-file">
+            <button type="button" class="remove-file-btn">删除</button>
+        `;
+        filesContainer.appendChild(fileItem);
+
+        // 添加删除按钮事件
+        fileItem.querySelector('.remove-file-btn').addEventListener('click', function() {
+            fileItem.remove();
+        });
+    });
+
+    // 初始链接和文件删除按钮事件
+    document.querySelectorAll('.remove-link-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.parentElement.remove();
+        });
+    });
+
+    document.querySelectorAll('.remove-file-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.parentElement.remove();
+        });
+    });
+
+    // 状态选择变化事件
+    document.getElementById('notification-status').addEventListener('change', function() {
+        const waitingGroup = document.getElementById('waiting-description-group');
+        if (this.value === 'waiting') {
+            waitingGroup.style.display = 'block';
+        } else {
+            waitingGroup.style.display = 'none';
         }
     });
 
@@ -278,10 +383,35 @@ function createNotificationElement(notification, type) {
     const header = document.createElement('div');
     header.className = 'notification-header';
 
+    // 创建标题容器
+    const titleContainer = document.createElement('div');
+    titleContainer.className = 'notification-title-container';
+
     // 创建标题
     const title = document.createElement('div');
     title.className = 'notification-title';
     title.textContent = notification.title;
+    titleContainer.appendChild(title);
+
+    // 创建日期标签
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const deadlineDate = new Date(deadline);
+    deadlineDate.setHours(0, 0, 0, 0);
+
+    if (deadlineDate.getTime() === today.getTime()) {
+        const dateTag = document.createElement('span');
+        dateTag.className = 'date-tag date-today';
+        dateTag.textContent = '今天期限';
+        titleContainer.appendChild(dateTag);
+    } else if (deadlineDate.getTime() === tomorrow.getTime()) {
+        const dateTag = document.createElement('span');
+        dateTag.className = 'date-tag date-tomorrow';
+        dateTag.textContent = '明天期限';
+        titleContainer.appendChild(dateTag);
+    }
 
     // 创建截止时间
     const deadlineDiv = document.createElement('div');
@@ -314,7 +444,7 @@ function createNotificationElement(notification, type) {
     actions.appendChild(deleteBtn);
 
     // 组装头部
-    header.appendChild(title);
+    header.appendChild(titleContainer);
     header.appendChild(deadlineDiv);
     header.appendChild(actions);
 
@@ -322,9 +452,38 @@ function createNotificationElement(notification, type) {
     const content = document.createElement('div');
     content.className = 'notification-content';
 
+    // 创建状态显示
+    if (notification.status) {
+        const statusDiv = document.createElement('div');
+        statusDiv.className = `notification-status status-${notification.status}`;
+
+        let statusText = '';
+        switch(notification.status) {
+            case 'ongoing': statusText = '进行中'; break;
+            case 'completed': statusText = '完成'; break;
+            case 'overdue': statusText = '逾期'; break;
+            case 'abandoned': statusText = '放弃'; break;
+            case 'waiting': statusText = '等待'; break;
+            default: statusText = notification.status;
+        }
+
+        statusDiv.textContent = statusText;
+        content.appendChild(statusDiv);
+
+        // 如果是等待状态，显示等待描述
+        if (notification.status === 'waiting' && notification.waitingDescription) {
+            const waitingDesc = document.createElement('div');
+            waitingDesc.className = 'waiting-description';
+            waitingDesc.textContent = notification.waitingDescription;
+            content.appendChild(waitingDesc);
+        }
+    }
+
     // 创建内容文本
     const contentText = document.createElement('p');
-    contentText.textContent = notification.content;
+    // 保留换行符，使用whiteSpace: pre-line样式
+    contentText.style.whiteSpace = 'pre-line';
+    contentText.textContent = notification.content || '';
     content.appendChild(contentText);
 
     // 如果有图片，显示图片
@@ -341,33 +500,65 @@ function createNotificationElement(notification, type) {
     }
 
     // 如果有链接，创建链接区域
-    if (notification.link) {
-        const linkDiv = document.createElement('div');
-        linkDiv.className = 'notification-link';
+    if (notification.links && notification.links.length > 0) {
+        const linksDiv = document.createElement('div');
+        linksDiv.className = 'notification-links';
 
-        // 创建链接按钮
-        const linkButton = document.createElement('a');
-        linkButton.className = 'link-button';
-        linkButton.href = notification.link;
-        linkButton.target = '_blank';
-        linkButton.textContent = '打开链接';
-        linkDiv.appendChild(linkButton);
+        notification.links.forEach((link, index) => {
+            const linkItem = document.createElement('div');
+            linkItem.className = 'link-item-display';
 
-        // 创建iframe切换按钮
-        const iframeToggle = document.createElement('button');
-        iframeToggle.className = 'iframe-toggle';
-        iframeToggle.textContent = '嵌入显示';
-        iframeToggle.addEventListener('click', function() {
-            toggleIframe(item);
+            // 创建链接按钮
+            const linkButton = document.createElement('a');
+            linkButton.className = 'link-button';
+            linkButton.href = link.url;
+            linkButton.target = '_blank';
+            linkButton.textContent = link.title || '打开链接';
+            linkItem.appendChild(linkButton);
+
+            // 创建iframe切换按钮
+            const iframeToggle = document.createElement('button');
+            iframeToggle.className = 'iframe-toggle';
+            iframeToggle.textContent = '嵌入显示';
+            iframeToggle.addEventListener('click', function() {
+                toggleIframe(item, index);
+            });
+            linkItem.appendChild(iframeToggle);
+
+            linksDiv.appendChild(linkItem);
+
+            // 创建iframe容器
+            const iframe = document.createElement('iframe');
+            iframe.className = 'notification-iframe';
+            iframe.src = link.url;
+            iframe.dataset.linkIndex = index;
+            content.appendChild(iframe);
         });
-        linkDiv.appendChild(iframeToggle);
 
-        // 创建iframe容器
-        const iframe = document.createElement('iframe');
-        iframe.className = 'notification-iframe';
-        iframe.src = notification.link;
-        content.appendChild(linkDiv);
-        content.appendChild(iframe);
+        content.appendChild(linksDiv);
+    }
+
+    // 如果有文件，创建文件区域
+    if (notification.files && notification.files.length > 0) {
+        const filesDiv = document.createElement('div');
+        filesDiv.className = 'notification-files';
+
+        notification.files.forEach(file => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item-display';
+
+            // 创建文件下载链接
+            const fileLink = document.createElement('a');
+            fileLink.className = 'file-link';
+            fileLink.href = file.data;
+            fileLink.download = file.name;
+            fileLink.textContent = file.name;
+            fileItem.appendChild(fileLink);
+
+            filesDiv.appendChild(fileItem);
+        });
+
+        content.appendChild(filesDiv);
     }
 
     // 组装通知项
@@ -391,6 +582,8 @@ function editNotification(type, notification) {
     const modalTitle = document.getElementById('modal-title');
     const notificationForm = document.getElementById('notification-form');
     const imagePreview = document.getElementById('image-preview');
+    const linksContainer = document.getElementById('links-container');
+    const filesContainer = document.getElementById('files-container');
 
     // 设置模态框标题
     if (type === 'competition') {
@@ -412,7 +605,92 @@ function editNotification(type, notification) {
     document.getElementById('notification-title').value = notification.title;
     document.getElementById('notification-content').value = notification.content || '';
     document.getElementById('notification-deadline').value = notification.deadline;
-    document.getElementById('notification-link').value = notification.link || '';
+
+    // 设置状态
+    const statusSelect = document.getElementById('notification-status');
+    statusSelect.value = notification.status || 'ongoing';
+
+    // 设置等待描述
+    const waitingDescription = document.getElementById('waiting-description');
+    const waitingDescriptionGroup = document.getElementById('waiting-description-group');
+    waitingDescription.value = notification.waitingDescription || '';
+
+    if (notification.status === 'waiting') {
+        waitingDescriptionGroup.style.display = 'block';
+    } else {
+        waitingDescriptionGroup.style.display = 'none';
+    }
+
+    // 清空并填充链接
+    linksContainer.innerHTML = '';
+
+    if (notification.links && notification.links.length > 0) {
+        notification.links.forEach(link => {
+            const linkItem = document.createElement('div');
+            linkItem.className = 'link-item';
+            linkItem.innerHTML = `
+                <input type="url" class="notification-link" value="${link.url}" placeholder="https://example.com">
+                <input type="text" class="link-title" value="${link.title || ''}" placeholder="链接标题（可选）">
+                <button type="button" class="remove-link-btn">删除</button>
+            `;
+            linksContainer.appendChild(linkItem);
+
+            // 添加删除按钮事件
+            linkItem.querySelector('.remove-link-btn').addEventListener('click', function() {
+                linkItem.remove();
+            });
+        });
+    } else {
+        // 如果没有链接，添加一个空链接项
+        const linkItem = document.createElement('div');
+        linkItem.className = 'link-item';
+        linkItem.innerHTML = `
+            <input type="url" class="notification-link" placeholder="https://example.com">
+            <input type="text" class="link-title" placeholder="链接标题（可选）">
+            <button type="button" class="remove-link-btn">删除</button>
+        `;
+        linksContainer.appendChild(linkItem);
+
+        // 添加删除按钮事件
+        linkItem.querySelector('.remove-link-btn').addEventListener('click', function() {
+            linkItem.remove();
+        });
+    }
+
+    // 清空并填充文件
+    filesContainer.innerHTML = '';
+
+    if (notification.files && notification.files.length > 0) {
+        notification.files.forEach(file => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.innerHTML = `
+                <div>当前文件: ${file.name}</div>
+                <input type="file" class="notification-file">
+                <button type="button" class="remove-file-btn">删除</button>
+            `;
+            filesContainer.appendChild(fileItem);
+
+            // 添加删除按钮事件
+            fileItem.querySelector('.remove-file-btn').addEventListener('click', function() {
+                fileItem.remove();
+            });
+        });
+    } else {
+        // 如果没有文件，添加一个空文件项
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        fileItem.innerHTML = `
+            <input type="file" class="notification-file">
+            <button type="button" class="remove-file-btn">删除</button>
+        `;
+        filesContainer.appendChild(fileItem);
+
+        // 添加删除按钮事件
+        fileItem.querySelector('.remove-file-btn').addEventListener('click', function() {
+            fileItem.remove();
+        });
+    }
 
     // 显示已有图片
     imagePreview.innerHTML = '';
@@ -444,8 +722,20 @@ function deleteNotification(type, id) {
 }
 
 // 切换iframe显示
-function toggleIframe(notificationItem) {
-    notificationItem.classList.toggle('iframe-visible');
+function toggleIframe(notificationItem, linkIndex) {
+    // 如果指定了链接索引，只切换对应的iframe
+    if (linkIndex !== undefined) {
+        const iframes = notificationItem.querySelectorAll('.notification-iframe');
+        if (iframes[linkIndex]) {
+            iframes[linkIndex].style.display = iframes[linkIndex].style.display === 'block' ? 'none' : 'block';
+        }
+    } else {
+        // 兼容旧版本，切换第一个iframe
+        const iframe = notificationItem.querySelector('.notification-iframe');
+        if (iframe) {
+            iframe.style.display = iframe.style.display === 'block' ? 'none' : 'block';
+        }
+    }
 }
 
 // 格式化日期
