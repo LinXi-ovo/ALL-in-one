@@ -15,6 +15,7 @@
                 <li><a href="#" class="nav-link" data-page="activity">二课活动通知</a></li>
                 <li><a href="#" class="nav-link" data-page="certificate">证书通知</a></li>
                 <li><a href="#" class="nav-link" data-page="assignment">作业通知</a></li>
+                <li><button id="import-export-btn" class="import-export-nav-btn">导入/导出</button></li>
             </ul>
         </nav>
     </header>
@@ -90,6 +91,27 @@
                 </div>
                 <button type="submit" class="submit-btn">提交</button>
             </form>
+        </div>
+    </div>
+
+    <!-- 导入导出模态框 -->
+    <div id="import-export-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-import-export">&times;</span>
+            <h2>导入/导出通知</h2>
+            <div class="import-export-container">
+                <div class="export-section">
+                    <h3>导出通知</h3>
+                    <p>将所有通知导出为JSON文件</p>
+                    <button id="export-all-btn" class="export-btn">导出所有通知</button>
+                </div>
+                <div class="import-section">
+                    <h3>导入通知</h3>
+                    <p>从JSON文件导入通知（将覆盖现有数据）</p>
+                    <input type="file" id="import-file" accept=".json">
+                    <button id="import-all-btn" class="import-btn">导入通知</button>
+                </div>
+            </div>
         </div>
     </div>
 

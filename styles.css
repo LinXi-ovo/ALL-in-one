@@ -304,6 +304,70 @@ textarea {
     background-color: #3a5ce5;
 }
 
+/* 导入导出功能样式 */
+.import-export-nav-btn {
+    background-color: transparent;
+    color: white;
+    border: none;
+    padding: 15px 10px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+}
+
+.import-export-nav-btn:hover {
+    border-bottom: 3px solid white;
+}
+
+.import-export-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.export-section, .import-section {
+    flex: 1;
+    padding: 15px;
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    margin: 0 10px;
+}
+
+.export-section:first-child, .import-section:first-child {
+    margin-left: 0;
+}
+
+.export-section:last-child, .import-section:last-child {
+    margin-right: 0;
+}
+
+.export-btn, .import-btn {
+    background-color: #4a6cf7;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 10px;
+    transition: background-color 0.3s ease;
+    display: block;
+}
+
+.export-btn:hover, .import-btn:hover {
+    background-color: #3a5ce5;
+}
+
+#import-file {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .nav-list {

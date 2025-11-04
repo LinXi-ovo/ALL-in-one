@@ -144,6 +144,38 @@ document.addEventListener('DOMContentLoaded', function() {
         loadNotifications(type);
     });
 
+    // 导入导出按钮事件
+    document.getElementById('import-export-btn').addEventListener('click', function() {
+        document.getElementById('import-export-modal').style.display = 'block';
+    });
+
+    // 关闭导入导出模态框
+    document.querySelector('.close-import-export').addEventListener('click', function() {
+        document.getElementById('import-export-modal').style.display = 'none';
+    });
+
+    // 点击导入导出模态框外部关闭
+    window.addEventListener('click', function(e) {
+        if (e.target === document.getElementById('import-export-modal')) {
+            document.getElementById('import-export-modal').style.display = 'none';
+        }
+    });
+
+    // 导出所有通知
+    document.getElementById('export-all-btn').addEventListener('click', function() {
+        exportAllNotifications();
+    });
+
+    // 导入所有通知
+    document.getElementById('import-all-btn').addEventListener('click', function() {
+        const fileInput = document.getElementById('import-file');
+        if (fileInput.files.length > 0) {
+            importAllNotifications(fileInput.files[0]);
+        } else {
+            alert('请选择要导入的文件');
+        }
+    });
+
     // 初始加载首页
     loadNotifications('home');
 });
@@ -425,4 +457,99 @@ function formatDate(date) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
 
     return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+// 导出所有通知
+function exportAllNotifications() {
+    const notificationTypes = ['competition', 'activity', 'certificate', 'assignment'];
+    const allNotifications = {};
+
+    // 收集所有类型的通知
+    notificationTypes.forEach(type => {
+        const notifications = JSON.parse(localStorage.getItem(type + 'Notifications') || '[]');
+        if (notifications.length > 0) {
+            allNotifications[type] = notifications;
+        }
+    });
+
+    // 添加导出时间戳
+    allNotifications.exportDate = new Date().toISOString();
+
+    // 转换为JSON字符串
+    const dataStr = JSON.stringify(allNotifications, null, 2);
+
+    // 创建Blob对象
+    const blob = new Blob([dataStr], {type: 'application/json'});
+
+    // 创建下载链接
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+
+    // 设置文件名（包含日期）
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    link.download = `notifications_${dateStr}.json`;
+
+    // 触发下载
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // 释放URL对象
+    URL.revokeObjectURL(url);
+
+    // 显示成功消息
+    alert('通知已成功导出！');
+}
+
+// 导入所有通知
+function importAllNotifications(file) {
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+
+            // 验证数据格式
+            if (!data || typeof data !== 'object') {
+                throw new Error('无效的文件格式');
+            }
+
+            // 确认导入操作
+            if (!confirm('导入将覆盖现有的所有通知数据，确定要继续吗？')) {
+                return;
+            }
+
+            // 导入各类型通知
+            const notificationTypes = ['competition', 'activity', 'certificate', 'assignment'];
+            notificationTypes.forEach(type => {
+                if (data[type] && Array.isArray(data[type])) {
+                    localStorage.setItem(type + 'Notifications', JSON.stringify(data[type]));
+                }
+            });
+
+            // 关闭导入导出模态框
+            document.getElementById('import-export-modal').style.display = 'none';
+            document.getElementById('import-file').value = '';
+
+            // 重新加载当前页面
+            const activePage = document.querySelector('.page.active');
+            if (activePage) {
+                const pageType = activePage.id.replace('-page', '');
+                if (pageType !== 'home') {
+                    loadNotifications(pageType);
+                }
+            }
+
+            // 显示成功消息
+            alert('通知已成功导入！');
+
+        } catch (error) {
+            alert('导入失败：' + error.message);
+        }
+    };
+
+    // 读取文件
+    reader.readAsText(file);
 }
