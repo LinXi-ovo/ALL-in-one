@@ -123,6 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         document.querySelectorAll('.file-item').forEach((item, index) => {
             const fileInput = item.querySelector('.notification-file');
+            const privacyCheckbox = item.querySelector('.file-privacy');
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
                 filePromises.push(
@@ -132,7 +133,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             resolve({
                                 name: file.name,
                                 type: file.type,
-                                data: e.target.result
+                                data: e.target.result,
+                                isPrivate: privacyCheckbox ? privacyCheckbox.checked : false
                             });
                         };
                         reader.readAsDataURL(file);
@@ -210,8 +212,110 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 导出所有通知
     document.getElementById('export-all-btn').addEventListener('click', function() {
-        exportAllNotifications();
+        exportAllNotificationsWithPrivacy();
     });
+
+    // 支持隐私选项的导出函数
+    function exportAllNotificationsWithPrivacy() {
+        // 获取用户选择的通知类型
+        const selectedTypes = [];
+        if (document.getElementById('export-competition').checked) selectedTypes.push('competition');
+        if (document.getElementById('export-activity').checked) selectedTypes.push('activity');
+        if (document.getElementById('export-certificate').checked) selectedTypes.push('certificate');
+        if (document.getElementById('export-assignment').checked) selectedTypes.push('assignment');
+
+        // 检查是否至少选择了一种类型
+        if (selectedTypes.length === 0) {
+            alert('请至少选择一种要导出的通知类型');
+            return;
+        }
+
+        // 检查是否导出为公共通知
+        const isPublic = document.getElementById('export-as-public').checked;
+
+        const allNotifications = {};
+        const imageFiles = {};
+
+        // 收集所选类型的通知
+        selectedTypes.forEach(type => {
+            const notifications = JSON.parse(localStorage.getItem(type + 'Notifications') || '[]');
+            if (notifications.length > 0) {
+                // 处理通知中的图片
+                const processedNotifications = notifications.map(notification => {
+                    const processedNotification = {...notification};
+
+                    // 如果是公共导出，移除私人信息
+                    if (isPublic) {
+                        // 保留基本通知信息，但移除私人状态和描述
+                        delete processedNotification.waitingDescription;
+
+                        // 过滤掉隐私文件
+                        if (processedNotification.files && processedNotification.files.length > 0) {
+                            processedNotification.files = processedNotification.files.filter(file => !file.isPrivate);
+                        }
+                    }
+
+                    if (processedNotification.image && processedNotification.image.startsWith('data:image')) {
+                        // 生成唯一文件名
+                        const fileName = `img_${processedNotification.id}_${Date.now()}.jpg`;
+
+                        // 保存图片数据
+                        imageFiles[fileName] = processedNotification.image;
+
+                        // 替换图片数据为文件名
+                        processedNotification.image = fileName;
+                    }
+
+                    return processedNotification;
+                });
+
+                allNotifications[type] = processedNotifications;
+            }
+        });
+
+        // 添加导出信息
+        allNotifications.exportDate = new Date().toISOString();
+        allNotifications.exportType = isPublic ? 'public' : 'private';
+
+        // 如果有图片，添加图片信息
+        if (Object.keys(imageFiles).length > 0) {
+            allNotifications.hasImages = true;
+        }
+
+        // 转换为JSON字符串
+        const dataStr = JSON.stringify(allNotifications, null, 2);
+
+        // 创建ZIP文件（如果需要包含图片）
+        if (Object.keys(imageFiles).length > 0) {
+            // 创建一个包含JSON和图片的ZIP文件
+            createZipFile(dataStr, imageFiles);
+        } else {
+            // 没有图片，直接导出JSON
+            // 创建Blob对象
+            const blob = new Blob([dataStr], {type: 'application/json'});
+
+            // 创建下载链接
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+
+            // 设置文件名（包含日期）
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+            link.download = `notifications_${dateStr}.json`;
+
+            // 触发下载
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // 释放URL对象
+            URL.revokeObjectURL(url);
+        }
+
+        // 显示成功消息
+        alert('通知已成功导出！');
+    }
 
     // 导入所有通知
     document.getElementById('import-all-btn').addEventListener('click', function() {
@@ -248,6 +352,10 @@ document.addEventListener('DOMContentLoaded', function() {
         fileItem.className = 'file-item';
         fileItem.innerHTML = `
             <input type="file" class="notification-file">
+            <label class="file-privacy-label">
+                <input type="checkbox" class="file-privacy">
+                隐私文件
+            </label>
             <button type="button" class="remove-file-btn">删除</button>
         `;
         filesContainer.appendChild(fileItem);
@@ -371,8 +479,13 @@ function loadNotifications(type) {
 // 创建通知元素
 function createNotificationElement(notification, type) {
     const now = new Date();
-    const deadline = new Date(notification.deadline);
-    const isExpired = deadline <= now;
+    let isExpired = false;
+
+    // 只有在有截止时间的情况下才检查是否逾期
+    if (notification.deadline) {
+        const deadline = new Date(notification.deadline);
+        isExpired = deadline <= now;
+    }
 
     // 创建通知项容器
     const item = document.createElement('div');
@@ -393,30 +506,36 @@ function createNotificationElement(notification, type) {
     title.textContent = notification.title;
     titleContainer.appendChild(title);
 
-    // 创建日期标签
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-    const deadlineDate = new Date(deadline);
-    deadlineDate.setHours(0, 0, 0, 0);
+    // 创建日期标签（如果有截止时间）
+    if (notification.deadline) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        const deadlineDate = new Date(notification.deadline);
+        deadlineDate.setHours(0, 0, 0, 0);
 
-    if (deadlineDate.getTime() === today.getTime()) {
-        const dateTag = document.createElement('span');
-        dateTag.className = 'date-tag date-today';
-        dateTag.textContent = '今天期限';
-        titleContainer.appendChild(dateTag);
-    } else if (deadlineDate.getTime() === tomorrow.getTime()) {
-        const dateTag = document.createElement('span');
-        dateTag.className = 'date-tag date-tomorrow';
-        dateTag.textContent = '明天期限';
-        titleContainer.appendChild(dateTag);
+        if (deadlineDate.getTime() === today.getTime()) {
+            const dateTag = document.createElement('span');
+            dateTag.className = 'date-tag date-today';
+            dateTag.textContent = '今天期限';
+            titleContainer.appendChild(dateTag);
+        } else if (deadlineDate.getTime() === tomorrow.getTime()) {
+            const dateTag = document.createElement('span');
+            dateTag.className = 'date-tag date-tomorrow';
+            dateTag.textContent = '明天期限';
+            titleContainer.appendChild(dateTag);
+        }
     }
 
-    // 创建截止时间
+    // 创建截止时间（如果有）
     const deadlineDiv = document.createElement('div');
     deadlineDiv.className = 'notification-deadline';
-    deadlineDiv.textContent = '截止时间: ' + formatDate(deadline);
+    if (notification.deadline) {
+        deadlineDiv.textContent = '截止时间: ' + formatDate(new Date(notification.deadline));
+    } else {
+        deadlineDiv.textContent = '无截止时间';
+    }
 
     // 创建操作按钮
     const actions = document.createElement('div');
@@ -479,12 +598,14 @@ function createNotificationElement(notification, type) {
         }
     }
 
-    // 创建内容文本
-    const contentText = document.createElement('p');
-    // 保留换行符，使用whiteSpace: pre-line样式
-    contentText.style.whiteSpace = 'pre-line';
-    contentText.textContent = notification.content || '';
-    content.appendChild(contentText);
+    // 创建内容文本（如果有）
+    if (notification.content) {
+        const contentText = document.createElement('p');
+        // 保留换行符，使用whiteSpace: pre-line样式
+        contentText.style.whiteSpace = 'pre-line';
+        contentText.textContent = notification.content;
+        content.appendChild(contentText);
+    }
 
     // 如果有图片，显示图片
     if (notification.image) {
@@ -604,7 +725,7 @@ function editNotification(type, notification) {
     // 填充表单数据
     document.getElementById('notification-title').value = notification.title;
     document.getElementById('notification-content').value = notification.content || '';
-    document.getElementById('notification-deadline').value = notification.deadline;
+    document.getElementById('notification-deadline').value = notification.deadline || '';
 
     // 设置状态
     const statusSelect = document.getElementById('notification-status');
@@ -665,8 +786,12 @@ function editNotification(type, notification) {
             const fileItem = document.createElement('div');
             fileItem.className = 'file-item';
             fileItem.innerHTML = `
-                <div>当前文件: ${file.name}</div>
+                <div>当前文件: ${file.name}${file.isPrivate ? ' (隐私)' : ''}</div>
                 <input type="file" class="notification-file">
+                <label class="file-privacy-label">
+                    <input type="checkbox" class="file-privacy" ${file.isPrivate ? 'checked' : ''}>
+                    隐私文件
+                </label>
                 <button type="button" class="remove-file-btn">删除</button>
             `;
             filesContainer.appendChild(fileItem);
