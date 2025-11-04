@@ -463,48 +463,156 @@ function formatDate(date) {
 function exportAllNotifications() {
     const notificationTypes = ['competition', 'activity', 'certificate', 'assignment'];
     const allNotifications = {};
+    const imageFiles = {};
 
     // 收集所有类型的通知
     notificationTypes.forEach(type => {
         const notifications = JSON.parse(localStorage.getItem(type + 'Notifications') || '[]');
         if (notifications.length > 0) {
+            // 处理通知中的图片
+            notifications.forEach(notification => {
+                if (notification.image && notification.image.startsWith('data:image')) {
+                    // 生成唯一文件名
+                    const fileName = `img_${notification.id}_${Date.now()}.jpg`;
+                    
+                    // 保存图片数据
+                    imageFiles[fileName] = notification.image;
+                    
+                    // 替换图片数据为文件名
+                    notification.image = fileName;
+                }
+            });
+            
             allNotifications[type] = notifications;
         }
     });
 
     // 添加导出时间戳
     allNotifications.exportDate = new Date().toISOString();
+    
+    // 如果有图片，添加图片信息
+    if (Object.keys(imageFiles).length > 0) {
+        allNotifications.hasImages = true;
+    }
 
     // 转换为JSON字符串
     const dataStr = JSON.stringify(allNotifications, null, 2);
 
-    // 创建Blob对象
-    const blob = new Blob([dataStr], {type: 'application/json'});
-
-    // 创建下载链接
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-
-    // 设置文件名（包含日期）
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-    link.download = `notifications_${dateStr}.json`;
-
-    // 触发下载
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // 释放URL对象
-    URL.revokeObjectURL(url);
+    // 创建ZIP文件（如果需要包含图片）
+    if (Object.keys(imageFiles).length > 0) {
+        // 创建一个包含JSON和图片的ZIP文件
+        createZipFile(dataStr, imageFiles);
+    } else {
+        // 没有图片，直接导出JSON
+        // 创建Blob对象
+        const blob = new Blob([dataStr], {type: 'application/json'});
+        
+        // 创建下载链接
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // 设置文件名（包含日期）
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+        link.download = `notifications_${dateStr}.json`;
+        
+        // 触发下载
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // 释放URL对象
+        URL.revokeObjectURL(url);
+    }
 
     // 显示成功消息
     alert('通知已成功导出！');
 }
 
+// 创建包含JSON和图片的ZIP文件
+function createZipFile(jsonData, imageFiles) {
+    // 使用JSZip库创建ZIP文件
+    // 注意：这需要在HTML中引入JSZip库
+    // <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    // 如果JSZip不可用，回退到仅导出JSON
+    if (typeof JSZip === 'undefined') {
+        console.warn('JSZip库未加载，将仅导出JSON数据，不包含图片');
+        
+        // 创建Blob对象
+        const blob = new Blob([jsonData], {type: 'application/json'});
+        
+        // 创建下载链接
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // 设置文件名（包含日期）
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+        link.download = `notifications_${dateStr}.json`;
+        
+        // 触发下载
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // 释放URL对象
+        URL.revokeObjectURL(url);
+        return;
+    }
+    
+    // 创建新的ZIP文件
+    const zip = new JSZip();
+    
+    // 添加JSON文件
+    zip.file("notifications.json", jsonData);
+    
+    // 创建images文件夹并添加图片
+    const imgFolder = zip.folder("images");
+    
+    // 将每个Base64图片转换为文件
+    Object.keys(imageFiles).forEach(fileName => {
+        // 从Base64字符串中提取实际数据
+        const base64Data = imageFiles[fileName].split(',')[1];
+        imgFolder.file(fileName, base64Data, {base64: true});
+    });
+    
+    // 生成ZIP文件
+    zip.generateAsync({type: "blob"}).then(function(content) {
+        // 创建下载链接
+        const url = URL.createObjectURL(content);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // 设置文件名（包含日期）
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+        link.download = `notifications_${dateStr}.zip`;
+        
+        // 触发下载
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // 释放URL对象
+        URL.revokeObjectURL(url);
+    });
+}
+
 // 导入所有通知
 function importAllNotifications(file) {
+    // 检查文件类型
+    const fileName = file.name.toLowerCase();
+    
+    // 如果是ZIP文件，使用特殊处理
+    if (fileName.endsWith('.zip')) {
+        importFromZip(file);
+        return;
+    }
+    
+    // 否则按JSON处理
     const reader = new FileReader();
 
     reader.onload = function(e) {
@@ -514,6 +622,13 @@ function importAllNotifications(file) {
             // 验证数据格式
             if (!data || typeof data !== 'object') {
                 throw new Error('无效的文件格式');
+            }
+            
+            // 检查是否有图片引用但缺少图片数据
+            if (data.hasImages) {
+                if (!confirm('此导入文件包含图片引用，但您上传的是JSON文件而非ZIP文件。图片将无法显示。是否继续？')) {
+                    return;
+                }
             }
 
             // 确认导入操作
@@ -552,4 +667,142 @@ function importAllNotifications(file) {
 
     // 读取文件
     reader.readAsText(file);
+}
+
+// 从ZIP文件导入
+function importFromZip(zipFile) {
+    // 检查JSZip是否可用
+    if (typeof JSZip === 'undefined') {
+        alert('导入失败：需要JSZip库来处理ZIP文件。请上传JSON文件或确保JSZip库已加载。');
+        return;
+    }
+    
+    // 使用JSZip读取ZIP文件
+    JSZip.loadAsync(zipFile).then(function(zip) {
+        // 检查是否包含notifications.json
+        if (!zip.file("notifications.json")) {
+            throw new Error('ZIP文件中未找到notifications.json');
+        }
+        
+        // 读取JSON数据
+        zip.file("notifications.json").async("string").then(function(jsonData) {
+            try {
+                const data = JSON.parse(jsonData);
+                
+                // 验证数据格式
+                if (!data || typeof data !== 'object') {
+                    throw new Error('无效的文件格式');
+                }
+                
+                // 确认导入操作
+                if (!confirm('导入将覆盖现有的所有通知数据，确定要继续吗？')) {
+                    return;
+                }
+                
+                // 处理图片
+                if (data.hasImages && zip.folder("images")) {
+                    // 获取images文件夹中的所有文件
+                    const imagePromises = [];
+                    const imageMap = {};
+                    
+                    zip.folder("images").forEach(function(relativePath, file) {
+                        if (!file.dir) {
+                            const promise = file.async("base64").then(function(base64Data) {
+                                // 构建完整的data URL
+                                const mimeType = getMimeTypeFromFileName(relativePath);
+                                imageMap[relativePath] = `data:${mimeType};base64,${base64Data}`;
+                            });
+                            imagePromises.push(promise);
+                        }
+                    });
+                    
+                    // 等待所有图片加载完成
+                    Promise.all(imagePromises).then(function() {
+                        // 将图片数据替换回通知中
+                        notificationTypes = ['competition', 'activity', 'certificate', 'assignment'];
+                        notificationTypes.forEach(type => {
+                            if (data[type] && Array.isArray(data[type])) {
+                                data[type].forEach(notification => {
+                                    if (notification.image && imageMap[notification.image]) {
+                                        notification.image = imageMap[notification.image];
+                                    }
+                                });
+                                
+                                // 保存到本地存储
+                                localStorage.setItem(type + 'Notifications', JSON.stringify(data[type]));
+                            }
+                        });
+                        
+                        // 关闭导入导出模态框
+                        document.getElementById('import-export-modal').style.display = 'none';
+                        document.getElementById('import-file').value = '';
+                        
+                        // 重新加载当前页面
+                        const activePage = document.querySelector('.page.active');
+                        if (activePage) {
+                            const pageType = activePage.id.replace('-page', '');
+                            if (pageType !== 'home') {
+                                loadNotifications(pageType);
+                            }
+                        }
+                        
+                        // 显示成功消息
+                        alert('通知已成功导入！');
+                    }).catch(function(error) {
+                        alert('导入失败：处理图片时出错 - ' + error.message);
+                    });
+                } else {
+                    // 没有图片，直接导入
+                    // 导入各类型通知
+                    const notificationTypes = ['competition', 'activity', 'certificate', 'assignment'];
+                    notificationTypes.forEach(type => {
+                        if (data[type] && Array.isArray(data[type])) {
+                            localStorage.setItem(type + 'Notifications', JSON.stringify(data[type]));
+                        }
+                    });
+                    
+                    // 关闭导入导出模态框
+                    document.getElementById('import-export-modal').style.display = 'none';
+                    document.getElementById('import-file').value = '';
+                    
+                    // 重新加载当前页面
+                    const activePage = document.querySelector('.page.active');
+                    if (activePage) {
+                        const pageType = activePage.id.replace('-page', '');
+                        if (pageType !== 'home') {
+                            loadNotifications(pageType);
+                        }
+                    }
+                    
+                    // 显示成功消息
+                    alert('通知已成功导入！');
+                }
+            } catch (error) {
+                alert('导入失败：' + error.message);
+            }
+        }).catch(function(error) {
+            alert('导入失败：读取JSON数据时出错 - ' + error.message);
+        });
+    }).catch(function(error) {
+        alert('导入失败：处理ZIP文件时出错 - ' + error.message);
+    });
+}
+
+// 根据文件名获取MIME类型
+function getMimeTypeFromFileName(fileName) {
+    const extension = fileName.split('.').pop().toLowerCase();
+    
+    switch (extension) {
+        case 'jpg':
+        case 'jpeg':
+            return 'image/jpeg';
+        case 'png':
+            return 'image/png';
+        case 'gif':
+            return 'image/gif';
+        case 'webp':
+            return 'image/webp';
+        default:
+            return 'image/jpeg'; // 默认返回jpeg
+    }
 }
