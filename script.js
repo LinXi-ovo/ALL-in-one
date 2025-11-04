@@ -733,26 +733,20 @@ function createNotificationElement(notification, type) {
             linkButton.className = 'link-button';
             linkButton.href = link.url;
             linkButton.target = '_blank';
-            linkButton.textContent = link.title || '打开链接';
+            linkButton.textContent = `链接${index + 1}`;
+            linkButton.title = link.url; // 添加悬浮提示显示URL
             linkItem.appendChild(linkButton);
 
-            // 创建iframe切换按钮
-            const iframeToggle = document.createElement('button');
-            iframeToggle.className = 'iframe-toggle';
-            iframeToggle.textContent = '嵌入显示';
-            iframeToggle.addEventListener('click', function() {
-                toggleIframe(item, index);
+            // 创建嵌入显示按钮
+            const embedToggle = document.createElement('button');
+            embedToggle.className = 'embed-toggle';
+            embedToggle.textContent = '嵌入显示';
+            embedToggle.addEventListener('click', function() {
+                showEmbedWindow(link.url, link.title || `链接${index + 1}`);
             });
-            linkItem.appendChild(iframeToggle);
+            linkItem.appendChild(embedToggle);
 
             linksDiv.appendChild(linkItem);
-
-            // 创建iframe容器
-            const iframe = document.createElement('iframe');
-            iframe.className = 'notification-iframe';
-            iframe.src = link.url;
-            iframe.dataset.linkIndex = index;
-            content.appendChild(iframe);
         });
 
         content.appendChild(linksDiv);
@@ -945,7 +939,7 @@ function deleteNotification(type, id) {
     loadNotifications(type);
 }
 
-// 切换iframe显示
+// 切换iframe显示（保留兼容性）
 function toggleIframe(notificationItem, linkIndex) {
     // 如果指定了链接索引，只切换对应的iframe
     if (linkIndex !== undefined) {
@@ -960,6 +954,96 @@ function toggleIframe(notificationItem, linkIndex) {
             iframe.style.display = iframe.style.display === 'block' ? 'none' : 'block';
         }
     }
+}
+
+// 显示嵌入窗口
+function showEmbedWindow(url, title) {
+    // 创建模态框
+    const embedModal = document.createElement('div');
+    embedModal.className = 'embed-modal';
+    embedModal.style.position = 'fixed';
+    embedModal.style.top = '0';
+    embedModal.style.left = '0';
+    embedModal.style.width = '100%';
+    embedModal.style.height = '100%';
+    embedModal.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    embedModal.style.zIndex = '1000';
+    embedModal.style.display = 'flex';
+    embedModal.style.justifyContent = 'center';
+    embedModal.style.alignItems = 'center';
+
+    // 创建内容容器
+    const embedContainer = document.createElement('div');
+    embedContainer.className = 'embed-container';
+    embedContainer.style.width = '80%';
+    embedContainer.style.height = '80%';
+    embedContainer.style.backgroundColor = 'white';
+    embedContainer.style.borderRadius = '8px';
+    embedContainer.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
+    embedContainer.style.position = 'relative';
+    embedContainer.style.display = 'flex';
+    embedContainer.style.flexDirection = 'column';
+
+    // 创建标题栏
+    const headerBar = document.createElement('div');
+    headerBar.className = 'embed-header';
+    headerBar.style.padding = '15px';
+    headerBar.style.backgroundColor = '#4a6cf7';
+    headerBar.style.color = 'white';
+    headerBar.style.display = 'flex';
+    headerBar.style.justifyContent = 'space-between';
+    headerBar.style.alignItems = 'center';
+    headerBar.style.borderRadius = '8px 8px 0 0';
+
+    // 创建标题
+    const headerTitle = document.createElement('div');
+    headerTitle.textContent = title;
+    headerTitle.style.fontWeight = 'bold';
+    headerBar.appendChild(headerTitle);
+
+    // 创建关闭按钮
+    const closeButton = document.createElement('button');
+    closeButton.textContent = '✕';
+    closeButton.style.background = 'none';
+    closeButton.style.border = 'none';
+    closeButton.style.color = 'white';
+    closeButton.style.fontSize = '20px';
+    closeButton.style.cursor = 'pointer';
+    closeButton.addEventListener('click', function() {
+        document.body.removeChild(embedModal);
+    });
+    headerBar.appendChild(closeButton);
+
+    // 创建iframe容器
+    const iframeContainer = document.createElement('div');
+    iframeContainer.style.flex = '1';
+    iframeContainer.style.padding = '15px';
+    iframeContainer.style.overflow = 'auto';
+    iframeContainer.style.minHeight = '0'; /* 确保flex子元素可以缩小 */
+
+    // 创建iframe
+    const iframe = document.createElement('iframe');
+    iframe.src = url;
+    iframe.style.width = '100%';
+    iframe.style.minHeight = '100%'; /* 使用min-height而不是height */
+    iframe.style.border = 'none';
+    iframe.style.borderRadius = '4px';
+    iframeContainer.appendChild(iframe);
+
+    // 组装模态框
+    embedContainer.appendChild(headerBar);
+    embedContainer.appendChild(iframeContainer);
+    embedModal.appendChild(embedContainer);
+
+    // 添加到页面
+    document.body.appendChild(embedModal);
+
+    // 点击模态框外部关闭
+    embedModal.addEventListener('click', function(e) {
+        if (e.target === embedModal) {
+            document.body.removeChild(embedModal);
+        }
+    });
 }
 
 // 格式化日期

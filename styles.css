@@ -191,8 +191,10 @@ h1 {
 }
 
 .notification-item.expanded .notification-content {
-    max-height: 500px;
+    max-height: 800px;
     padding: 0 15px 15px;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .notification-link {
@@ -228,6 +230,40 @@ h1 {
 
 .notification-item.iframe-visible .notification-iframe {
     display: block;
+}
+
+/* 嵌入窗口样式 */
+.embed-container {
+    overflow: hidden;
+    max-height: 90vh; /* 设置最大高度为视口高度的90% */
+    display: flex;
+    flex-direction: column;
+}
+
+.embed-header {
+    width: 100%;
+    box-sizing: border-box;
+    flex-shrink: 0; /* 防止标题栏被压缩 */
+}
+
+/* 为嵌入窗口的iframe容器添加滚动 */
+.embed-container > div:last-child {
+    overflow: auto;
+    flex: 1; /* 使iframe容器占据剩余空间 */
+}
+
+.embed-toggle {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.embed-toggle:hover {
+    background-color: #5a6268;
 }
 
 /* 图片预览样式 */
