@@ -15,6 +15,12 @@
                 <li><a href="#" class="nav-link" data-page="activity">二课活动通知</a></li>
                 <li><a href="#" class="nav-link" data-page="certificate">证书通知</a></li>
                 <li><a href="#" class="nav-link" data-page="assignment">作业通知</a></li>
+                <li class="dropdown">
+                    <button class="dropdown-btn">功能 <span class="dropdown-arrow">▼</span></button>
+                    <div class="dropdown-content">
+                        <a href="#" id="view-urgent-notifications">查看紧急提醒</a>
+                    </div>
+                </li>
                 <li><button id="import-export-btn" class="import-export-nav-btn">导入/导出</button></li>
             </ul>
         </nav>
@@ -167,6 +173,28 @@
                     <p>从JSON文件导入通知（将覆盖现有数据）</p>
                     <input type="file" id="import-file" accept=".json">
                     <button id="import-all-btn" class="import-btn">导入通知</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 紧急提醒模态框 -->
+    <div id="urgent-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-urgent">&times;</span>
+            <h2>紧急提醒</h2>
+            <div class="urgent-container">
+                <div class="urgent-section">
+                    <h3>今天期限的通知</h3>
+                    <div id="today-notifications" class="urgent-list">
+                        <!-- 今天期限的通知将在这里显示 -->
+                    </div>
+                </div>
+                <div class="urgent-section">
+                    <h3>明天期限的通知</h3>
+                    <div id="tomorrow-notifications" class="urgent-list">
+                        <!-- 明天期限的通知将在这里显示 -->
+                    </div>
                 </div>
             </div>
         </div>

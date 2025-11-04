@@ -389,6 +389,105 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // 查看紧急提醒按钮事件
+    document.getElementById('view-urgent-notifications').addEventListener('click', function(e) {
+        e.preventDefault();
+        showUrgentNotifications();
+    });
+
+    // 关闭紧急提醒模态框
+    document.querySelector('.close-urgent').addEventListener('click', function() {
+        document.getElementById('urgent-modal').style.display = 'none';
+    });
+
+    // 点击紧急提醒模态框外部关闭
+    window.addEventListener('click', function(e) {
+        if (e.target === document.getElementById('urgent-modal')) {
+            document.getElementById('urgent-modal').style.display = 'none';
+        }
+    });
+
+    // 显示紧急提醒
+    function showUrgentNotifications() {
+        const todayContainer = document.getElementById('today-notifications');
+        const tomorrowContainer = document.getElementById('tomorrow-notifications');
+
+        // 清空现有内容
+        todayContainer.innerHTML = '';
+        tomorrowContainer.innerHTML = '';
+
+        // 获取今天和明天的日期
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+
+        // 获取所有类型的通知
+        const notificationTypes = ['competition', 'activity', 'certificate', 'assignment'];
+
+        notificationTypes.forEach(type => {
+            const notifications = JSON.parse(localStorage.getItem(type + 'Notifications') || '[]');
+
+            notifications.forEach(notification => {
+                if (notification.deadline) {
+                    const deadline = new Date(notification.deadline);
+                    deadline.setHours(0, 0, 0, 0);
+
+                    // 检查是否是今天或明天的截止日期
+                    if (deadline.getTime() === today.getTime()) {
+                        // 创建今天期限的通知项
+                        const todayItem = createUrgentNotificationItem(notification, type, '今天');
+                        todayContainer.appendChild(todayItem);
+                    } else if (deadline.getTime() === tomorrow.getTime()) {
+                        // 创建明天期限的通知项
+                        const tomorrowItem = createUrgentNotificationItem(notification, type, '明天');
+                        tomorrowContainer.appendChild(tomorrowItem);
+                    }
+                }
+            });
+        });
+
+        // 显示模态框
+        document.getElementById('urgent-modal').style.display = 'block';
+    }
+
+    // 创建紧急提醒通知项
+    function createUrgentNotificationItem(notification, type, timeText) {
+        const item = document.createElement('div');
+        item.className = 'urgent-item';
+
+        // 创建标题
+        const title = document.createElement('div');
+        title.className = 'urgent-title';
+        title.textContent = notification.title;
+        item.appendChild(title);
+
+        // 创建类型标签
+        const typeLabel = document.createElement('div');
+        typeLabel.className = 'urgent-type';
+        typeLabel.style.fontSize = '12px';
+        typeLabel.style.color = '#666';
+        typeLabel.style.marginBottom = '5px';
+
+        let typeText = '';
+        switch(type) {
+            case 'competition': typeText = '比赛通知'; break;
+            case 'activity': typeText = '二课活动通知'; break;
+            case 'certificate': typeText = '证书通知'; break;
+            case 'assignment': typeText = '作业通知'; break;
+        }
+        typeLabel.textContent = typeText;
+        item.appendChild(typeLabel);
+
+        // 创建截止时间
+        const deadline = document.createElement('div');
+        deadline.className = 'urgent-deadline';
+        deadline.textContent = `${timeText}截止: ${formatDate(new Date(notification.deadline))}`;
+        item.appendChild(deadline);
+
+        return item;
+    }
+
     // 初始加载首页
     loadNotifications('home');
 });

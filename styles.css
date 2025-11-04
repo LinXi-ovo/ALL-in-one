@@ -48,6 +48,60 @@ nav {
     border-bottom: 3px solid white;
 }
 
+/* 下拉菜单样式 */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-btn {
+    background-color: transparent;
+    color: white;
+    border: none;
+    padding: 15px 10px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-btn:hover {
+    border-bottom: 3px solid white;
+}
+
+.dropdown-arrow {
+    margin-left: 5px;
+    font-size: 12px;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #4a6cf7;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 0 0 8px 8px;
+}
+
+.dropdown-content a {
+    color: white;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    transition: background-color 0.3s;
+}
+
+.dropdown-content a:hover {
+    background-color: #3a5ce5;
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
 /* 主要内容区域 */
 main {
     max-width: 1200px;
@@ -442,6 +496,57 @@ textarea {
 .date-tomorrow {
     background-color: #2196f3;
     color: white;
+}
+
+/* 紧急提醒样式 */
+.urgent-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.urgent-section {
+    flex: 1;
+    padding: 15px;
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    margin: 0 10px;
+    background-color: #f9f9f9;
+}
+
+.urgent-section h3 {
+    color: #4a6cf7;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.urgent-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.urgent-item {
+    padding: 10px;
+    border-bottom: 1px solid #eaeaea;
+    margin-bottom: 10px;
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.urgent-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.urgent-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.urgent-deadline {
+    color: #666;
+    font-size: 14px;
 }
 
 .import-export-container {
