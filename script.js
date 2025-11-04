@@ -47,17 +47,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 关闭模态框
     closeBtn.addEventListener('click', function() {
-        modal.style.display = 'none';
-        notificationForm.reset();
+        closeModal();
     });
 
     // 点击模态框外部关闭
     window.addEventListener('click', function(e) {
         if (e.target === modal) {
-            modal.style.display = 'none';
-            notificationForm.reset();
+            closeModal();
         }
     });
+
+    // 关闭模态框的通用函数
+    function closeModal() {
+        modal.style.display = 'none';
+        notificationForm.reset();
+        notificationForm.removeAttribute('data-mode');
+        notificationForm.removeAttribute('data-id');
+        imagePreview.innerHTML = '';
+    }
 
     // 图片上传预览
     const imageInput = document.getElementById('notification-image');
@@ -90,6 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
 
         const type = this.getAttribute('data-type');
+        const mode = this.getAttribute('data-mode') || 'add';
         const title = document.getElementById('notification-title').value;
         const content = document.getElementById('notification-content').value;
         const deadline = document.getElementById('notification-deadline').value;
@@ -102,20 +110,34 @@ document.addEventListener('DOMContentLoaded', function() {
             imageData = previewImg.src;
         }
 
-        // 保存通知到本地存储
-        saveNotification(type, {
-            id: Date.now(),
-            title,
-            content,
-            deadline,
-            link,
-            image: imageData,
-            created: new Date().toISOString()
-        });
+        // 根据模式执行不同操作
+        if (mode === 'edit') {
+            const id = parseInt(this.getAttribute('data-id'));
+            updateNotification(type, id, {
+                title,
+                content,
+                deadline,
+                link,
+                image: imageData
+            });
+        } else {
+            // 保存新通知到本地存储
+            saveNotification(type, {
+                id: Date.now(),
+                title,
+                content,
+                deadline,
+                link,
+                image: imageData,
+                created: new Date().toISOString()
+            });
+        }
 
         // 关闭模态框并重置表单
         modal.style.display = 'none';
         this.reset();
+        this.removeAttribute('data-mode');
+        this.removeAttribute('data-id');
         imagePreview.innerHTML = '';
 
         // 重新加载通知
@@ -157,6 +179,27 @@ function saveNotification(type, notification) {
 
     // 保存回本地存储
     localStorage.setItem(type + 'Notifications', JSON.stringify(notifications));
+}
+
+// 更新通知
+function updateNotification(type, id, updatedData) {
+    // 获取现有通知
+    let notifications = JSON.parse(localStorage.getItem(type + 'Notifications') || '[]');
+
+    // 找到要更新的通知索引
+    const index = notifications.findIndex(n => n.id === id);
+
+    if (index !== -1) {
+        // 更新通知数据，保留原有的created时间
+        notifications[index] = {
+            ...notifications[index],
+            ...updatedData,
+            updated: new Date().toISOString()
+        };
+
+        // 保存回本地存储
+        localStorage.setItem(type + 'Notifications', JSON.stringify(notifications));
+    }
 }
 
 // 加载并显示通知
@@ -308,6 +351,47 @@ function createNotificationElement(notification, type) {
     });
 
     return item;
+}
+
+// 编辑通知
+function editNotification(type, notification) {
+    const modal = document.getElementById('notification-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const notificationForm = document.getElementById('notification-form');
+    const imagePreview = document.getElementById('image-preview');
+
+    // 设置模态框标题
+    if (type === 'competition') {
+        modalTitle.textContent = '编辑比赛通知';
+    } else if (type === 'activity') {
+        modalTitle.textContent = '编辑活动通知';
+    } else if (type === 'certificate') {
+        modalTitle.textContent = '编辑证书通知';
+    } else if (type === 'assignment') {
+        modalTitle.textContent = '编辑作业通知';
+    }
+
+    // 设置表单类型和编辑模式
+    notificationForm.setAttribute('data-type', type);
+    notificationForm.setAttribute('data-mode', 'edit');
+    notificationForm.setAttribute('data-id', notification.id);
+
+    // 填充表单数据
+    document.getElementById('notification-title').value = notification.title;
+    document.getElementById('notification-content').value = notification.content || '';
+    document.getElementById('notification-deadline').value = notification.deadline;
+    document.getElementById('notification-link').value = notification.link || '';
+
+    // 显示已有图片
+    imagePreview.innerHTML = '';
+    if (notification.image) {
+        const img = document.createElement('img');
+        img.src = notification.image;
+        imagePreview.appendChild(img);
+    }
+
+    // 显示模态框
+    modal.style.display = 'block';
 }
 
 // 删除通知
