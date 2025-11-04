@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通知管理系统</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul class="nav-list">
+                <li><a href="#" class="nav-link active" data-page="home">首页</a></li>
+                <li><a href="#" class="nav-link" data-page="competition">比赛通知</a></li>
+                <li><a href="#" class="nav-link" data-page="activity">二课活动通知</a></li>
+                <li><a href="#" class="nav-link" data-page="certificate">证书通知</a></li>
+                <li><a href="#" class="nav-link" data-page="assignment">作业通知</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <div id="home-page" class="page active">
+            <h1>通知管理系统</h1>
+            <p>请选择上方导航栏查看不同类型的通知</p>
+        </div>
+        <div id="competition-page" class="page">
+            <h1>比赛通知</h1>
+            <div class="notification-controls">
+                <button id="add-competition-btn" class="add-btn">添加比赛通知</button>
+            </div>
+            <div id="competition-list" class="notification-list">
+                <!-- 比赛通知将在这里动态生成 -->
+            </div>
+        </div>
+        <div id="activity-page" class="page">
+            <h1>二课活动通知</h1>
+            <div class="notification-controls">
+                <button id="add-activity-btn" class="add-btn">添加活动通知</button>
+            </div>
+            <div id="activity-list" class="notification-list">
+                <!-- 活动通知将在这里动态生成 -->
+            </div>
+        </div>
+        <div id="certificate-page" class="page">
+            <h1>证书通知</h1>
+            <div class="notification-controls">
+                <button id="add-certificate-btn" class="add-btn">添加证书通知</button>
+            </div>
+            <div id="certificate-list" class="notification-list">
+                <!-- 证书通知将在这里动态生成 -->
+            </div>
+        </div>
+        <div id="assignment-page" class="page">
+            <h1>作业通知</h1>
+            <div class="notification-controls">
+                <button id="add-assignment-btn" class="add-btn">添加作业通知</button>
+            </div>
+            <div id="assignment-list" class="notification-list">
+                <!-- 作业通知将在这里动态生成 -->
+            </div>
+        </div>
+    </main>
+
+    <!-- 添加通知的模态框 -->
+    <div id="notification-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modal-title">添加通知</h2>
+            <form id="notification-form">
+                <div class="form-group">
+                    <label for="notification-title">标题</label>
+                    <input type="text" id="notification-title" required>
+                </div>
+                <div class="form-group">
+                    <label for="notification-content">内容</label>
+                    <textarea id="notification-content" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="notification-deadline">截止时间</label>
+                    <input type="datetime-local" id="notification-deadline" required>
+                </div>
+                <div class="form-group">
+                    <label for="notification-link">相关链接（可选）</label>
+                    <input type="url" id="notification-link" placeholder="https://example.com">
+                </div>
+                <div class="form-group">
+                    <label for="notification-image">上传图片（可选）</label>
+                    <input type="file" id="notification-image" accept="image/*">
+                    <div id="image-preview" class="image-preview"></div>
+                </div>
+                <button type="submit" class="submit-btn">提交</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
